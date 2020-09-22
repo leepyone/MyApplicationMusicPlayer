@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat;
 import android.Manifest;
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -51,6 +52,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private MediaPlayer mediaPlayer = null;
     private static final String TAG = "MyActivity";
     public static final String DATA_URI = "com.wangshuo.data_uri";
+    public static final String TITLE = "com.wangshuo.song_title";
+    public static final String ARTIST = "com.wangshuo.song_artist";
+
 
 
     //item click
@@ -92,29 +96,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //
 //                    albumCursor.close();
 //                }
-
-
-                if(tvBottomTitle!=null){
+                if(tvBottomTitle!=null)
                     tvBottomTitle.setText(title);
-
-                }
-                if(tvBottomAuthor!=null){
+                if(tvBottomAuthor!=null)
                     tvBottomAuthor.setText(artist);
-                }
+
 
                 String data = cursor.getString(dataIndex);
-                Uri dataUri = Uri.parse(data);
+//                Uri dataUri = Uri.parse(data);
+                Intent serviceIntent = new Intent(MainActivity.this,MusicService.class);
+                serviceIntent.putExtra(MainActivity.ARTIST,artist);
+                serviceIntent.putExtra(MainActivity.TITLE,title);
+                serviceIntent.putExtra(MainActivity.DATA_URI,data);
+                startService(serviceIntent);
 
-                if(mediaPlayer!=null){
-                    try{
-                        mediaPlayer.reset();
-                        mediaPlayer.setDataSource(MainActivity.this,dataUri);
-                        mediaPlayer.prepare();
-                        mediaPlayer.start();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
+//                if(mediaPlayer!=null){
+//                    try{
+//                        mediaPlayer.reset();
+//                        mediaPlayer.setDataSource(MainActivity.this,dataUri);
+//                        mediaPlayer.prepare();
+//                        mediaPlayer.start();
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
 
             }
         }
