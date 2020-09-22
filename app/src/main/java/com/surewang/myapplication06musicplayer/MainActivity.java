@@ -5,15 +5,24 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.util.Size;
@@ -22,6 +31,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
@@ -48,13 +58,89 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView tvBottomAuthor;
     private ImageView ivAlbumThumbnail;
     private ImageView ivPlay;
+    private ProgressBar progressBar;
+    public static final int UPDATE_PROGRESS = 1;
+    public static final String  ACTION_MUSIC_START = "com.wangshuo.action_start";
+    public static final String  ACTION_MUSIC_STOP = "com.wangshuo.action_stop";
+    private MusicReceiver musicReceiver;
+    private Handler handler = new Handler(Looper.getMainLooper()){
+      public void handlerMessage(Message message){
+          switch (message.what){
+              case UPDATE_PROGRESS:
+                  int position = message.arg1;
+                  progressBar.setProgress(position);
+                  break;
+              default:
+                  break;
+          }
+      }
+    };
+
+    public class  MusicProgressRunnable implements Runnable{
+
+        @Override
+        public void run() {
+            boolean threadWorking = true;
+            while (threadWorking) {
+                try {
+                    if(musicService !=null){
+
+                            int position = musicService.getCurrentPosition();
+                            Message message = new Message();
+                            message.what = UPDATE_PROGRESS;
+                            message.arg1 = position;
+                            handler.sendMessage(message);
+                    }
+                    threadWorking = musicService.isPlaying();
+                    Thread.sleep(100);
+                }catch (InterruptedException e){
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public class MusicReceiver extends BroadcastReceiver{
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if(musicService!=null){
+                System.out.println("总的长度"+musicService.getDuration());
+                progressBar.setMax(musicService.getDuration());
+                new Thread(new MusicProgressRunnable()).start();
+            }
+        }
+    }
+
     //play
     private MediaPlayer mediaPlayer = null;
     private static final String TAG = "MyActivity";
     public static final String DATA_URI = "com.wangshuo.data_uri";
     public static final String TITLE = "com.wangshuo.song_title";
     public static final String ARTIST = "com.wangshuo.song_artist";
+    //service
+    private  MusicService musicService;
+    private boolean bound = false;
 
+    private ServiceConnection Conn = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+
+            MusicService.MusicServiceBinder binder =  (MusicService.MusicServiceBinder) service;
+            musicService = binder.getService();
+            if(musicService==null)
+                System.out.println("binder service is null");
+            bound =true;
+
+
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            musicService = null;
+            bound = false;
+        }
+    };
 
 
     //item click
@@ -125,7 +211,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     };
 
-    private boolean pause ;
+    private boolean playStatus = true ;
+
 
 
 
@@ -150,6 +237,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }else{
               initPlayList();
         }
+        musicReceiver = new MusicReceiver();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(ACTION_MUSIC_START);
+        intentFilter.addAction(ACTION_MUSIC_STOP);
+        registerReceiver(musicReceiver,intentFilter);
+
         playList =findViewById(R.id.lv_songList);
         playList.setAdapter(mediaCursorAdapter);
         playList.setOnItemClickListener(itemClickListener);
@@ -160,7 +253,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onStart();
         if(mediaPlayer==null)
             mediaPlayer = new MediaPlayer();
-
+        Intent  intent = new Intent(MainActivity.this,MusicService.class);
+        bindService(intent,Conn,Context.BIND_AUTO_CREATE);
 
     }
 
@@ -177,6 +271,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onStop();
     }
 
+    @Override
+    protected void onDestroy() {
+        unregisterReceiver(musicReceiver);
+        super.onDestroy();
+    }
     @Override
     public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){
 
@@ -197,6 +296,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         LayoutInflater.from(MainActivity.this).inflate(R.layout.bottom_media_toolbar,navigation,true);
 
         ivPlay = findViewById(R.id.iv_play);
+        progressBar = findViewById(R.id.progress);
         tvBottomTitle =navigation.findViewById(R.id.tv_bottom_title);
         tvBottomAuthor = navigation.findViewById(R.id.tv_bottom_author);
         ivAlbumThumbnail = navigation.findViewById(R.id.iv_thumbnail);
@@ -216,8 +316,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onClick(View v) {
-        ListView listView =v.findViewById(R.id.lv_songList);
+        if(v.getId()==R.id.iv_play){
+//            playStatus = !playStatus;
+            if(playStatus){
+                if(musicService==null)
+                    System.out.println("service is null");
+                musicService.pause();
+                ivPlay.setImageResource(R.drawable.ic_baseline_play_circle_outline_24);
+
+            }else {
+
+                System.out.println("start play ");
+                musicService.play();
+                ivPlay.setImageResource(R.drawable.ic_baseline_pause_circle_outline_24);
+
+            }
+
+            playStatus = !playStatus;
+        }
 //        ImageView play
+
+
 
     }
 }

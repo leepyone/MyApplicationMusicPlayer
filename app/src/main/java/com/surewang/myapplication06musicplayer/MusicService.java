@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 
@@ -21,6 +22,8 @@ public class MusicService extends Service {
     private static final int ONGOING_NOTIFICATION_ID =1001;
     private static final String CHANNEL_ID = "Music Channel";
     private MediaPlayer mediaPlayer;
+    private final IBinder binder = new MusicServiceBinder();
+
     public MusicService() {
     }
 
@@ -54,6 +57,9 @@ public class MusicService extends Service {
                 mediaPlayer.setDataSource(getApplicationContext(),dataUri);
                 mediaPlayer.prepare();
                 mediaPlayer.start();
+
+                Intent musicStartIntent = new Intent(MainActivity.ACTION_MUSIC_START);
+                sendBroadcast(musicStartIntent);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -77,10 +83,47 @@ public class MusicService extends Service {
         super.onDestroy();
     }
 
+    public class MusicServiceBinder extends Binder{
+
+
+        MusicService getService(){
+            return  MusicService.this;
+        }
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
-        // TODO: Return the communication channel to the service.
-        throw new UnsupportedOperationException("Not yet implemented");
+        return binder;
+
     }
+    public void pause(){
+        if(mediaPlayer!=null)
+            mediaPlayer.pause();
+    }
+
+    public void play(){
+        if(mediaPlayer!=null)
+            mediaPlayer.start();
+    }
+
+    public int getDuration(){
+        int duration = 0;
+        if(mediaPlayer!=null)
+            duration = mediaPlayer.getDuration();
+        return  duration;
+    }
+
+    public int getCurrentPosition(){
+        int position = 0;
+        if(mediaPlayer !=null)
+            position = mediaPlayer.getCurrentPosition();
+        return position;
+
+    }
+    public boolean isPlaying(){
+        if(mediaPlayer!=null)
+            return mediaPlayer.isPlaying();
+        return false;
+    }
+
 }
