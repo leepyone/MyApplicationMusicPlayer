@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="#f8f8f8"
+
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <ProgressBar
@@ -11,9 +13,12 @@
         android:layout_width="0dp"
         android:layout_height="1dp"
         android:progress="28"
-        android:progressBackgroundTint="@android:color/transparent"
+
+        android:progressBackgroundTint="@android:color/black"
+        android:progressTint="@color/colorRed"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="@id/tv_title"
+
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         tools:ignore="NotSibling" />
     <ImageView
@@ -33,7 +38,7 @@
         android:layout_height="wrap_content"
         android:text="Title"
         android:textSize="14sp"
-        android:textColor="@color/colorPrimary"
+        android:textColor="@android:color/black"
         android:layout_marginStart="8dp"
         android:layout_marginEnd="56dp"
         app:layout_constraintTop_toTopOf="parent"

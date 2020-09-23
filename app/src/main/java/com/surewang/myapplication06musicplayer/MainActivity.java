@@ -86,12 +86,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     if(musicService !=null){
 
                             int position = musicService.getCurrentPosition();
+                            progressBar.setProgress(position);
                             Message message = new Message();
                             message.what = UPDATE_PROGRESS;
                             message.arg1 = position;
                             handler.sendMessage(message);
                     }
-                    threadWorking = musicService.isPlaying();
+//                    threadWorking = musicService.isPlaying();
                     Thread.sleep(100);
                 }catch (InterruptedException e){
                     e.printStackTrace();
@@ -163,7 +164,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 String artist = cursor.getString(artistIndex);
                 Uri albumUri = ContentUris.withAppendedId(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,albumId);
 
-//                Cursor albumCursor = contentResolver.query(albumUri,null,null,null,null);
                 Bitmap thumbnail = null;
                 try {
                      thumbnail = contentResolver.loadThumbnail(albumUri, new Size(100,100), null);
@@ -171,17 +171,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     e.printStackTrace();
                 }
                 ivAlbumThumbnail.setImageBitmap(thumbnail);
-//                if(albumCursor!=null && albumCursor.getCount()>0){
-//
-//                    albumCursor.moveToFirst();
-//                    int albumArtIndex = albumCursor.getColumnIndex(MediaStore.Audio.Albums.ALBUM_ART);
-//                    String albumArt = albumCursor.getString(albumArtIndex);
-//                    //图像的显示
-//
-//                    Glide.with(MainActivity.this).load(albumArt).into(ivAlbumThumbnail);
-//
-//                    albumCursor.close();
-//                }
                 if(tvBottomTitle!=null)
                     tvBottomTitle.setText(title);
                 if(tvBottomAuthor!=null)
@@ -189,23 +178,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
                 String data = cursor.getString(dataIndex);
-//                Uri dataUri = Uri.parse(data);
+
                 Intent serviceIntent = new Intent(MainActivity.this,MusicService.class);
                 serviceIntent.putExtra(MainActivity.ARTIST,artist);
                 serviceIntent.putExtra(MainActivity.TITLE,title);
                 serviceIntent.putExtra(MainActivity.DATA_URI,data);
                 startService(serviceIntent);
 
-//                if(mediaPlayer!=null){
-//                    try{
-//                        mediaPlayer.reset();
-//                        mediaPlayer.setDataSource(MainActivity.this,dataUri);
-//                        mediaPlayer.prepare();
-//                        mediaPlayer.start();
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
 
             }
         }
@@ -261,6 +240,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void  onStop(){
 
+//        if(mediaPlayer!=null){
+//            mediaPlayer.stop();
+//            mediaPlayer.release();
+//            mediaPlayer =null;
+//            Log.d(TAG,"onStop invoked!");
+//
+//        }
+        super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        Log.d(TAG,"destroy is done ");
         if(mediaPlayer!=null){
             mediaPlayer.stop();
             mediaPlayer.release();
@@ -268,12 +260,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.d(TAG,"onStop invoked!");
 
         }
-        super.onStop();
-    }
-
-    @Override
-    protected void onDestroy() {
         unregisterReceiver(musicReceiver);
+
         super.onDestroy();
     }
     @Override
